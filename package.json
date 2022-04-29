@@ -1,0 +1,30 @@
+{
+  "name": "y",
+  "version": "1.0.0",
+  "description": "A software prototype that scores the security of intstalled packages based on information like daily downloads and publisher activity",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cybercubes/security-seer.git"
+  },
+  "keywords": [
+    "package",
+    "security",
+    "risk",
+    "seer",
+    "metrics"
+  ],
+  "author": "Kirill Lõssenko",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/cybercubes/security-seer/issues"
+  },
+  "homepage": "https://github.com/cybercubes/security-seer#readme",
+  "dependencies": {
+    "eslint": "^8.14.0"
+  }
+}
