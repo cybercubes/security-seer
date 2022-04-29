@@ -1,5 +1,6 @@
 {
-  "name": "y",
+  "type": "module",
+  "name": "security-seer",
   "version": "1.0.0",
   "description": "A software prototype that scores the security of intstalled packages based on information like daily downloads and publisher activity",
   "main": "index.js",
