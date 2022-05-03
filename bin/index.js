@@ -13,7 +13,7 @@ async function main() {
     const scores = calculateAllScores(metrics, referencePoint);
 
     for (const entry of scores) {
-      console.log(`${entry.name}: ${entry.score}`);
+      console.log(`${entry.name}: ${entry.category}, ${entry.percentage}`);
     }
 
   } catch (error) {
@@ -27,14 +27,18 @@ async function getMetricsForSingleDependency(dependencyObject) {
     const response = await fetch(endpoint);
     const body = await response.json();
 
+    if (!body.collected) {
+      return {error: `Could not receive a response from https://api.npms.io/v2/package/ for the package name ${dependencyObject.name}`};
+    }
+
     return {
       name: dependencyObject.name,
-      weeklyDownloads: body.collected.npm.downloads[1].count,
-      npmStarsCount: body.collected.npm.starsCount,
-      githubStarsCount: body.collected.github.starsCount,
-      gitHubForksCount: body.collected.github.forksCount,
-      githubSubscribersCount: body.collected.github.subscribersCount,
-      latestVersion: body.collected.metadata.version,
+      weeklyDownloads: (!body.collected.npm ? 0 : body.collected.npm.downloads[1].count),
+      npmStarsCount: (!body.collected.npm ? 0 : body.collected.npm.starsCount),
+      githubStarsCount: (!body.collected.github ? 0 : body.collected.github.starsCount),
+      gitHubForksCount: (!body.collected.github ? 0 : body.collected.github.forksCount),
+      githubSubscribersCount: (!body.collected.github ? 0 : body.collected.github.subscribersCount),
+      latestVersion: (!body.collected.metadata ? "unknown" : body.collected.metadata.version),
       currentVersion: dependencyObject.version,
     };
 }
@@ -54,11 +58,20 @@ function calculateAllScores(packageMetrics, referencePoint) {
     const scores = [];
 
     for (const entry of packageMetrics) {
+        if (entry.error) {
+          scores.push({
+            name: entry.name,
+            category: "ERROR",
+            percentage: "none",
+          })
+        }
+
         let score = calculateSingleScore(entry, referencePoint);
 
         scores.push({
             name: entry.name,
-            score: score,
+            category: score.category,
+            percentage: Math.round(score.percentage).toFixed(2),
         });
     }
 
@@ -78,19 +91,21 @@ function calculateSingleScore(pacakgeEntry, referencePoint) {
       scorePercentage /= 1.1;
     }
 
-    const readableScore = parseScorePercentage(scorePercentage);
+    const readableScore = {
+        category: parseScorePercentage(scorePercentage),
+        percentage: scorePercentage,
+    };
+    
 
     return readableScore;
 }
 
 function parseScorePercentage(percentage) {
-  console.log(percentage);
-
   if (percentage > 100) {
     return "ERROR";
   }
 
-  if (percentage > 91.0) {
+  if (percentage >= 90.0) {
     return "EXCEPTIONAL";
   } 
 
@@ -102,7 +117,7 @@ function parseScorePercentage(percentage) {
     return "MEDIUM";
   }
 
-  if (percentage > 11.0) {
+  if (percentage >= 10.0) {
     return "LOW";
   } 
 
