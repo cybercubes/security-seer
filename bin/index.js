@@ -2,168 +2,115 @@
 
 import { execute } from '../function.js';
 import fetch from 'node-fetch';
+import getLatestVersion from 'get-latest-version';
 
 async function main() {
   try {
-    const listPromise = await execute("npm list -json");
-    const parsedList = JSON.parse(listPromise);
-    const finalList = getDependecies(parsedList.dependencies);
-    const metrics = await getMetricsForDependencyList(finalList);
-    const referencePoint = await getReferencePointInfo();
-    const scores = calculateAllScores(metrics, referencePoint);
+    console.log("generating lock file...");
+    await execute("npm i --package-lock-only");
+    console.log("lock file generated!");
 
-    for (const entry of scores) {
-      console.log(`${entry.name}: ${entry.category}, ${entry.percentage}`);
-    }
+    const listPromise = await execute("npm list --json");
+    const parsedList = JSON.parse(listPromise);
+
+    console.log("processing dependencies...");
+    const finalList = await getDependecies(parsedList);
+    const testPackage = {name: 'angular', version: 'latest'};
+
+    const testFrequency = await getPublishingFrequency(testPackage);
+
+    console.log(testFrequency);
+
+    // const dependentsCount = await getDependentsCount(testPackage);
+    // console.log(dependentsCount)
+
+    console.log(finalList);
 
   } catch (error) {
     console.error(error);
-  }
-}
-
-async function getMetricsForSingleDependency(dependencyObject) {
-    const endpoint = `https://api.npms.io/v2/package/${dependencyObject.name}`;
-
-    const response = await fetch(endpoint);
-    const body = await response.json();
-
-    if (!body.collected) {
-      return {error: `Could not receive a response from https://api.npms.io/v2/package/ for the package name ${dependencyObject.name}`};
-    }
-
-    return {
-      name: dependencyObject.name,
-      weeklyDownloads: (!body.collected.npm ? 0 : body.collected.npm.downloads[1].count),
-      npmStarsCount: (!body.collected.npm ? 0 : body.collected.npm.starsCount),
-      githubStarsCount: (!body.collected.github ? 0 : body.collected.github.starsCount),
-      gitHubForksCount: (!body.collected.github ? 0 : body.collected.github.forksCount),
-      githubSubscribersCount: (!body.collected.github ? 0 : body.collected.github.subscribersCount),
-      latestVersion: (!body.collected.metadata ? "unknown" : body.collected.metadata.version),
-      currentVersion: dependencyObject.version,
-    };
-}
-
-async function getMetricsForDependencyList(dependencies) {
-  const metricList = [];
-
-  for (const element of dependencies) {
-    const entry = await getMetricsForSingleDependency(element);
-    metricList.push(entry);
-  }
-
-  return metricList;
-}
-
-function calculateAllScores(packageMetrics, referencePoint) {
-    const scores = [];
-
-    for (const entry of packageMetrics) {
-        if (entry.error) {
-          scores.push({
-            name: entry.name,
-            category: "ERROR",
-            percentage: "none",
-          })
-        }
-
-        let score = calculateSingleScore(entry, referencePoint);
-
-        scores.push({
-            name: entry.name,
-            category: score.category,
-            percentage: Math.round(score.percentage).toFixed(2),
-        });
-    }
-
-    return scores;
-}
-
-function calculateSingleScore(pacakgeEntry, referencePoint) { 
-    const weeklyDownloadsScore = pacakgeEntry.weeklyDownloads * 100 / (referencePoint.weeklyDownloads + 0.1);
-    const npmStarsCountScore = pacakgeEntry.npmStarsCount * 100 / (referencePoint.npmStarsCount + 0.1);
-    const gitHubForksCountScore = pacakgeEntry.gitHubForksCount * 100 / (referencePoint.gitHubForksCount + 0.1);
-    const githubStarsCountScore = pacakgeEntry.githubStarsCount * 100 / (referencePoint.githubStarsCount + 0.1);
-    const githubSubscribersCountScore = pacakgeEntry.githubSubscribersCount * 100 / (referencePoint.githubSubscribersCount + 0.1);
-
-    let scorePercentage = average([weeklyDownloadsScore, npmStarsCountScore, gitHubForksCountScore, githubStarsCountScore, githubSubscribersCountScore]);
-
-    if (pacakgeEntry.currentVersion != pacakgeEntry.latestVersion) {
-      scorePercentage /= 1.1;
-    }
-
-    const readableScore = {
-        category: parseScorePercentage(scorePercentage),
-        percentage: scorePercentage,
-    };
     
-
-    return readableScore;
+  }
 }
 
-function parseScorePercentage(percentage) {
-  if (percentage > 100) {
-    return "ERROR";
-  }
-
-  if (percentage >= 90.0) {
-    return "EXCEPTIONAL";
-  } 
-
-  if (percentage >= 66.6) {
-    return "HIGH";
-  }
-
-  if (percentage >= 33.3) {
-    return "MEDIUM";
-  }
-
-  if (percentage >= 10.0) {
-    return "LOW";
-  } 
-
-  if (percentage >= 0.0) {
-    return "TERRIBLE";
-  }
-
-  console.log("ParseScorePercentage received bad arguments");
-  return "ERROR";
-
-}
-
-function getDependecies(depList) {
-  const names = Object.keys(depList);
-
-    const list = []
-    for (const key in depList) {
-      list.push({
-        name: key,
-        version: depList[key].version,
-      });
-    }
-    return list;
-}
-
-
-async function getReferencePointInfo() {
-  const expressEndpoint = `https://api.npms.io/v2/package/express`;
-  const AngularEndpoint = `https://api.npms.io/v2/package/angular`;
-
-  const angularResponse = await fetch(AngularEndpoint);
-  const angularBody = await angularResponse.json();
+async function handleProblems(problems) {
+  const list = [];
   
-  const expressResponse = await fetch(expressEndpoint);
-  const expressBody = await expressResponse.json();
+  for (const problem of problems) {
+    //console.log(problem);
+    const regex = /:\s?(.[^@]+)@(.+),/;
+    const matcher = problem.match(regex);
+    const packageName = matcher[1];
+    const packageVersionRange = matcher[2];
+    if (matcher[2].includes("file")) {
+      continue;
+    }
+    const packageVersion = await getLatestVersion(packageName, {range: packageVersionRange})
+      .then((version) => version)
+      .catch((err) => console.error(err));
 
-  return {
-    name: "Reference",
-    weeklyDownloads: expressBody.collected.npm.downloads[1].count,
-    npmStarsCount: expressBody.collected.npm.starsCount,
-    githubStarsCount: angularBody.collected.github.starsCount,
-    gitHubForksCount: angularBody.collected.github.forksCount,
-    githubSubscribersCount: angularBody.collected.github.subscribersCount,
-  };
+    //console.log(`${packageName}@${packageVersion}`);
+    list.push({
+      name: packageName,
+      version: packageVersion,
+    });
+  }
+
+  return list;
 }
 
-const average = arr => arr.reduce((a,b) => a + b, 0) / arr.length;
+async function getPublishingFrequency(dependency) {
+  const commandString = `npm view ${dependency.name}@${dependency.version} time --json`;
+  const result = await execute(commandString);
+  const resultObject = JSON.parse(result);
 
+  const lifespan = Date.now() - Date.parse(resultObject.created);
+  const totalUpdates = Object.keys(resultObject).length - 2;
+  const frequency = lifespan / totalUpdates;
+
+  //from milliseconds to days
+  return frequency / 86400000;
+}
+
+async function getDependenciesCount(dependency) {
+  const commandString = `npm view ${dependency.name}@${dependency.version} dependencies --json`;
+  const result = await execute(commandString);
+  const length = Object.keys(JSON.parse(result)).length;
+
+  return length;
+}
+
+async function getDepricationMessage(dependency) {
+  const commandString = `npm view ${dependency.name}@${dependency.version} deprecated`;
+  const result = await execute(commandString);
+
+  return result;
+}
+
+async function getDependentsCount(dependency) {
+  const url = `https://www.npmjs.com/package/${dependency.name}/v/${dependency.version}`;
+  console.log(url);
+  const res = await fetch(url);
+  const html = await res.text();
+  const regexForDepCount = /"dependentsCount"\s*:\s*(\d+)/;
+  const num = html.match(regexForDepCount)[1];
+
+  return num;
+}
+
+async function getDependecies(depList) {
+  if (depList.problems) {
+    const res = await handleProblems(depList.problems);
+    return res;
+  }
+  const names = Object.keys(depList.dependencies);
+  const list = [];
+
+  for (const key in depList.dependencies) {
+    list.push({
+      name: key,
+      version: depList.dependencies[key].version,
+    });
+  }
+  return list;
+}
 main();

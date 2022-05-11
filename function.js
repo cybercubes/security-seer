@@ -20,7 +20,8 @@ export function execute(command) {
      */
     childProcess.exec(command, function(error, standardOutput, standardError) {
       if (error) {
-        reject();
+        //reject(error);
+        resolve(standardOutput);
 
         return;
       }
