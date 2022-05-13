@@ -1,0 +1,30 @@
+{
+    "default": {
+        "dependencyThreshold": "10",
+        "dependentsThreshold": "1",
+        "publishFrequencyThreshold": "14",
+        "versionTrustThresholds": {
+            "majorVersionThreshold": null,
+            "minorVersionThreshold": null,
+            "patchVersionThreshold": null
+        },
+        "firstPublishedThreshold": "3",
+        "assessDeprication": "false"
+    },
+    "excluded": ["eslint"],
+    "custom": [
+        {
+            "name": "angular",
+            "dependencyThreshold": "10",
+            "dependentsThreshold": "10",
+            "publishFrequencyThreshold": "20",
+            "versionTrustThresholds": {
+                "majorVersionThreshold": "9",
+                "minorVersionThreshold": "99",
+                "patchVersionThreshold": "999"
+            },
+            "firstPublishedThreshold": "22",
+            "assessDeprication": "false"
+        }
+    ]
+}
