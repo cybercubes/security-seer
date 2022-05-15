@@ -1,8 +1,8 @@
 {
     "default": {
         "dependencyThreshold": "10",
-        "dependentsThreshold": "1",
-        "publishFrequencyThreshold": "14",
+        "dependentsThreshold": "10",
+        "publishFrequencyThreshold": "28",
         "versionTrustThresholds": {
             "majorVersionThreshold": null,
             "minorVersionThreshold": null,
@@ -14,14 +14,27 @@
     "excluded": ["eslint"],
     "custom": [
         {
-            "name": "angular",
-            "dependencyThreshold": "10",
-            "dependentsThreshold": "10",
-            "publishFrequencyThreshold": "20",
+            "name": "get-latest-version",
+            "dependencyThreshold": "1",
+            "dependentsThreshold": "5",
+            "publishFrequencyThreshold": null,
             "versionTrustThresholds": {
-                "majorVersionThreshold": "9",
-                "minorVersionThreshold": "99",
-                "patchVersionThreshold": "999"
+                "majorVersionThreshold": "1",
+                "minorVersionThreshold": "1",
+                "patchVersionThreshold": "1"
+            },
+            "firstPublishedThreshold": "750",
+            "assessDeprication": "false"
+        },
+        {
+            "name": "fs",
+            "dependencyThreshold": "1",
+            "dependentsThreshold": "10",
+            "publishFrequencyThreshold": null,
+            "versionTrustThresholds": {
+                "majorVersionThreshold": "1",
+                "minorVersionThreshold": "1",
+                "patchVersionThreshold": "1"
             },
             "firstPublishedThreshold": "22",
             "assessDeprication": "false"
